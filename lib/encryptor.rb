@@ -66,10 +66,18 @@ module Encryptor
           cipher.key = OpenSSL::PKCS5.pbkdf2_hmac_sha1(options[:key], options[:salt], 2000, cipher.key_len)
         end
       else
-        cipher.pkcs5_keyivgen(options[:key])
+        cipher_options = [options[:key], options[:salt], options[:iterations], options[:digest]]
+        cipher.pkcs5_keyivgen(*cipher_options)
       end
       yield cipher, options if block_given?
+      if options[:encode] && cipher_method == :decrypt
+        options[:value] = [options[:value]].pack(options[:encode])
+      end
       result = cipher.update(options[:value])
       result << cipher.final
+      if options[:encode] && cipher_method == :encrypt
+          result = result.unpack(options[:encode]).first
+      end
+      result
     end
 end
